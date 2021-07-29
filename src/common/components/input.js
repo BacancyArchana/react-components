@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import PropTypes from "prop-types";
 import {
   FormGroup,
@@ -8,6 +8,7 @@ import {
   Input as CustomInput,
   Label,
 } from "reactstrap";
+import { numberValidation, textValidation } from "../../utils/fieldValidation";
 
 const Input = ({
   type,
@@ -29,8 +30,22 @@ const Input = ({
   className,
   labelClassName,
   inputClassName,
+  validation,
 }) => {
+  const [isValid, setValid] = useState(null);
   const onBlurInput = (e) => {
+    if (type === "text") {
+      const tecxValid = textValidation(e.target.value, {
+        ...validation,
+      });
+      setValid(tecxValid);
+    }
+    if (type === "number") {
+      const numValid = numberValidation(e.target.value, {
+        ...validation,
+      });
+      setValid(numValid);
+    }
     blurHandler(name, type === "checkbox" ? e.target.checked : e.target.value);
     validate(name, type === "checkbox" ? e.target.checked : e.target.value);
   };
@@ -91,6 +106,7 @@ const Input = ({
         {!isCheckInput ? inputEle : null}
 
         {infoMsg && <FormText color="muted">{infoMsg}</FormText>}
+        {isValid && <FormText color="danger">{isValid}</FormText>}
         {isError && (
           <FormText color="danger">
             {errorMsg || `Invalid value for ${name}.`}
@@ -120,6 +136,7 @@ Input.defaultProps = {
   className: "",
   labelClassName: "",
   inputClassName: "",
+  validation: {},
 };
 
 Input.propTypes = {
@@ -127,6 +144,7 @@ Input.propTypes = {
     "checkbox",
     "date",
     "dateTime",
+    "number",
     "radio",
     "select",
     "text",
@@ -136,6 +154,7 @@ Input.propTypes = {
   label: PropTypes.string,
   value: PropTypes.oneOfType([
     PropTypes.string,
+    PropTypes.number,
     PropTypes.object,
     PropTypes.bool,
   ]),
@@ -159,6 +178,29 @@ Input.propTypes = {
   className: PropTypes.string,
   labelClassName: PropTypes.string,
   inputClassName: PropTypes.string,
+  validation: PropTypes.shape({
+    fieldName: PropTypes.string,
+    message: PropTypes.string,
+    required: PropTypes.oneOfType([PropTypes.bool, PropTypes.string]),
+    whiteSpace: PropTypes.oneOfType([PropTypes.bool, PropTypes.string]),
+    trimInput: PropTypes.oneOfType([PropTypes.bool, PropTypes.string]),
+    positive: PropTypes.oneOfType([PropTypes.bool, PropTypes.string]),
+    float: PropTypes.oneOfType([PropTypes.bool, PropTypes.string]),
+    range: PropTypes.oneOfType([
+      PropTypes.arrayOf([PropTypes.number, PropTypes.number]),
+      PropTypes.shape({
+        value: PropTypes.arrayOf([PropTypes.number, PropTypes.number]),
+        message: PropTypes.string,
+      }),
+    ]),
+    fixDigit: PropTypes.oneOfType([
+      PropTypes.oneOfType([PropTypes.bool, PropTypes.number]),
+      PropTypes.shape({
+        value: PropTypes.oneOfType([PropTypes.bool, PropTypes.number]),
+        message: PropTypes.string,
+      }),
+    ]),
+  }),
 };
 
 export default Input;
