@@ -2,9 +2,17 @@ import PropTypes from "prop-types";
 
 const textValidation = (
   value,
-  { fieldName, message, required, whiteSpace = true, trimInput }
+  {
+    fieldName,
+    message,
+    required,
+    whiteSpace,
+    trimInput,
+    maxLength,
+    minLength,
+    specialChar,
+  }
 ) => {
-  const regEx = /^[a-zA-Z0-9\s]+$/;
   let string = value;
   if (trimInput) {
     string = typeof string === "string" ? string.trim() : string;
@@ -14,15 +22,60 @@ const textValidation = (
       ? required
       : `${fieldName ? fieldName : "Value"} is required.`;
   }
+  let regEx = !specialChar ? /^[a-zA-Z0-9 \s]+$/ : /\w/;
+  let strMsg = `Invalid string value for ${fieldName ? fieldName : "text"}.`;
+  if (
+    Array.isArray(specialChar) ||
+    (typeof specialChar === "object" && Array.isArray(specialChar.value))
+  ) {
+    // allow listed special chars
+    let charList = Array.isArray(specialChar) ? specialChar : specialChar.value;
+    console.log(specialChar, charList);
+    charList = charList.map((char) =>
+      char.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&")
+    );
+    regEx = new RegExp("^[a-zA-Z0-9 s" + charList.join("") + "]+$", "gi");
+    // if
+    strMsg = `Invalid special character value for ${
+      fieldName ? fieldName : "text"
+    }.`;
+  } else if (typeof specialChar === "object") {
+    strMsg = specialChar.message ? specialChar.message : strMsg;
+  }
+  if (string && !regEx.test(string)) {
+    return typeof message === "string"
+      ? specialChar.message
+        ? specialChar.message
+        : message
+      : strMsg;
+  }
   if (!whiteSpace && string && /[\s]/.test(string)) {
     return typeof whiteSpace === "string"
       ? whiteSpace
       : `Whitespace not allowed for ${fieldName ? fieldName : "text"}.`;
   }
-  if (string && !regEx.test(string)) {
-    return typeof message === "string"
-      ? message
-      : `Invalid string value for ${fieldName ? fieldName : "text"}.`;
+
+  if (minLength) {
+    if (minLength.value && string.length < minLength.value) {
+      return typeof minLength.message === "string"
+        ? minLength.message
+        : `Minimum length required for ${fieldName ? fieldName : "text"}.`;
+    } else if (string.length < minLength) {
+      return `Minimum length required for ${fieldName ? fieldName : "text"}.`;
+    }
+  }
+  if (maxLength) {
+    if (maxLength.value && string.length > maxLength.value) {
+      return typeof maxLength.message === "string"
+        ? maxLength.message
+        : `Maximum ${maxLength.value} characters allowed for ${
+            fieldName ? fieldName : "text"
+          }.`;
+    } else if (string.length > maxLength) {
+      return `Maximum ${maxLength} characters allowed for ${
+        fieldName ? fieldName : "text"
+      }.`;
+    }
   }
   return null;
 };
@@ -33,19 +86,45 @@ textValidation.defaultProps = {
     fieldName: null,
     message: null,
     required: false,
-    whiteSpace: false,
+    whiteSpace: true,
     trimInput: false,
+    minLength: null,
+    maxLength: null,
+    specialChar: null,
   },
 };
 
 textValidation.propTypes = {
-  value: PropTypes.number,
+  value: PropTypes.string,
   options: PropTypes.shape({
     fieldName: PropTypes.string,
     message: PropTypes.string,
     whiteSpace: PropTypes.oneOfType([PropTypes.bool, PropTypes.string]),
     trimInput: PropTypes.oneOfType([PropTypes.bool, PropTypes.string]),
     required: PropTypes.oneOfType([PropTypes.bool, PropTypes.string]),
+    specialChar: PropTypes.oneOfType([
+      PropTypes.bool,
+      PropTypes.string,
+      PropTypes.arrayOf(PropTypes.string),
+      PropTypes.shape({
+        value: PropTypes.arrayOf(PropTypes.string),
+        message: PropTypes.string,
+      }),
+    ]),
+    minLength: PropTypes.oneOfType([
+      PropTypes.number,
+      PropTypes.shape({
+        value: PropTypes.number,
+        message: PropTypes.string,
+      }),
+    ]),
+    maxLength: PropTypes.oneOfType([
+      PropTypes.number,
+      PropTypes.shape({
+        value: PropTypes.number,
+        message: PropTypes.string,
+      }),
+    ]),
   }),
 };
 
@@ -53,19 +132,18 @@ const numberValidation = (
   value,
   { fieldName, message, required, positive, float, range, fixDigit }
 ) => {
+  if (required && !`${value}`) {
+    return typeof required === "string"
+      ? required
+      : `${fieldName ? fieldName : "Value"} is required.`;
+  }
+
   let number = Number(value);
   if (Number.isNaN(Number(value))) {
     return typeof message === "string"
       ? message
       : `Invalid value for ${fieldName ? fieldName : "number"}.`;
   }
-
-  if (required && !`${number}`) {
-    return typeof required === "string"
-      ? required
-      : `${fieldName ? fieldName : "Value"} is required.`;
-  }
-
   const positiveNumRegEx = /^(?:[1-9]\d*|0)?(?:\.\d+)?$/;
   if (number && positive && !positiveNumRegEx.test(number)) {
     return typeof positive === "string"

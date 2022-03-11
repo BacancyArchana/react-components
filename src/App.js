@@ -1,4 +1,4 @@
-import InputComponent from "./components/input";
+import InputComponent from "./components/inputComponents";
 
 function App() {
   return (
